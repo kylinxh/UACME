@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.H
 *
-*  VERSION:     3.15
+*  VERSION:     3.19
 *
-*  DATE:        15 Feb 2019
+*  DATE:        22 May 2019
 *
 *  Common header file for the program support routines.
 *
@@ -104,6 +104,7 @@ BOOL supRunProcess2(
     _In_ LPWSTR lpszProcessName,
     _In_opt_ LPWSTR lpszParameters,
     _In_opt_ LPWSTR lpVerb,
+    _In_ INT nShow,
     _In_ BOOL fWait);
 
 BOOL supRunProcess(
@@ -324,6 +325,16 @@ PVOID supCreateUacmeContext(
 
 VOID supDestroyUacmeContext(
     _In_ PVOID Context);
+
+NTSTATUS supEnableDisableWow64Redirection(
+    _In_ BOOL bDisable);
+
+BOOLEAN supIndirectRegAdd(
+    _In_ WCHAR* pszRootKey,
+    _In_ WCHAR* pszKey,
+    _In_opt_ WCHAR* pszValue,
+    _In_opt_ WCHAR* pszDataType,
+    _In_ WCHAR* pszData);
 
 #ifdef _DEBUG
 #define supDbgMsg(Message)  OutputDebugString(Message)

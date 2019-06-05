@@ -4,9 +4,9 @@
 *
 *  TITLE:       CONSTS.H
 *
-*  VERSION:     3.15
+*  VERSION:     3.19
 *
-*  DATE:        17 Feb 2019
+*  DATE:        22 May 2019
 *
 *  Global consts definition file.
 *
@@ -24,6 +24,14 @@
 #define AKAGI_XOR_KEY               'naka'
 #define AKAGI_XOR_KEY2              ' pta'
 
+#pragma region PYSH
+#define T_USAGE_HELP                L"Usage: Akagi.exe [Method] [OptionalParamToExecute]"
+#define PROGRAMTITLE_VERSION        L"UACMe v 3.1.9.1905"
+#define WOW64STRING                 L"Wow64 detected, use x64 version of this tool."
+#define WOW64WIN32ONLY              L"This method only works with x86-32 Windows or from Wow64"
+#define UACFIX                      L"This method fixed/unavailable in the current version of Windows, do you still want to continue?"
+#pragma endregion
+
 #define T_MACHINE                   L"MACHINE\\"
 
 #define T_WINDOWS_CURRENT_VERSION   L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
@@ -40,8 +48,9 @@
 #define T_EXEFILE_SHELL             L"Software\\Classes\\exefile"
 #define T_MSSETTINGS                L"Software\\Classes\\ms-settings"
 #define T_CLASSESFOLDER             L"Software\\Classes\\Folder"
+#define T_APPXPACKAGE               L"Software\\Classes\\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2"
 #define T_SHELL_OPEN_COMMAND        L"\\shell\\open\\command"
-#define T_SHELL_RUNAS_COMMAND       L"\\shell\\runas\\command" 
+#define T_SHELL_RUNAS_COMMAND       L"\\shell\\runas\\command"
 
 #define T_FILE_PREP                 L"file://"
 
@@ -120,6 +129,7 @@
 #define SHELL32_DLL                 L"shell32.dll"
 #define SRRSTR_DLL                  L"srrstr.dll"
 #define SLC_DLL                     L"SLC.dll"
+#define UNATTEND_DLL                L"unattend.dll"
 #define UNBCL_DLL                   L"unbcl.dll"
 #define WBEMCOMN_DLL                L"wbemcomn.dll"
 #define WDSCORE_DLL                 L"wdscore.dll"
@@ -167,6 +177,7 @@
 #define TPMINIT_EXE                 L"tpminit.exe"
 #define TZSYNC_EXE                  L"tzsync.exe"
 #define WINSAT_EXE                  L"winsat.exe"
+#define WSRESET_EXE                 L"WSReset.exe"
 #define WUSA_EXE                    L"wusa.exe"
 
 //
@@ -209,6 +220,7 @@
 #define RUNDLL_EXE_CMD              L"rundll32.exe " //with space as part of command
 
 #define REG_HKCU                    L"HKEY_CURRENT_USER"
+#define T_REG_SZ                    L"REG_SZ"
 
 //
 // Units specific values
@@ -232,14 +244,6 @@
 #define INETMGR_SXS                 L"microsoft-windows-iis-managementconsole"
 #define COMCTL32_SXS                L"microsoft.windows.common-controls"
 #define GDIPLUS_SXS                 L"microsoft.windows.gdiplus"
-
-#pragma region PYSH
-#define T_USAGE_HELP                L"Usage: Akagi.exe [Method] [OptionalParamToExecute]"
-#define PROGRAMTITLE_VERSION        L"UACMe v 3.1.5.1902"
-#define WOW64STRING                 L"Wow64 detected, use x64 version of this tool."
-#define WOW64WIN32ONLY              L"This method only works with x86-32 Windows or from Wow64"
-#define UACFIX                      L"This method fixed/unavailable in the current version of Windows, do you still want to continue?"
-#pragma endregion
 
 #define T_VOLATILE_ENV              L"Volatile Environment"
 #define T_SYSTEMROOT_VAR            L"SYSTEMROOT"

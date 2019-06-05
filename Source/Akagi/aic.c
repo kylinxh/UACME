@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2017 - 2018
+*  (C) COPYRIGHT AUTHORS, 2017 - 2019
 *
 *  TITLE:       AIC.C
 *
-*  VERSION:     3.11
+*  VERSION:     3.19
 *
-*  DATE:        23 Nov 2018
+*  DATE:        22 May 2019
 *
 * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED
@@ -41,9 +41,14 @@ unsigned char LaunchAdminProcessSignature14393[] = {
     0xEC, 0x20, 0x04, 0x00, 0x00
 };
 
-unsigned char LaunchAdminProcessSignature_15063_18282[] = {
+unsigned char LaunchAdminProcessSignature_15063_18362[] = {
     0x40, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x81,
     0xEC, 0x20, 0x04, 0x00, 0x00
+};
+
+unsigned char LaunchadminProcessSignature_18895_xxxxx[] = {
+    0x40, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x81, 
+    0xEC, 0x30, 0x04, 0x00, 0x00
 };
 
 /*
@@ -55,7 +60,7 @@ unsigned char LaunchAdminProcessSignature_15063_18282[] = {
 *
 */
 ULONG_PTR AicFindLaunchAdminProcess(
-    _In_ PULONG ErrorCode)
+    _Out_ PNTSTATUS StatusCode)
 {
     ULONG_PTR Address = 0;
     PBYTE Pattern = NULL, ScanBase = NULL;
@@ -63,43 +68,46 @@ ULONG_PTR AicFindLaunchAdminProcess(
     IMAGE_NT_HEADERS *NtHeaders;
     LPWSTR ScanModule = NULL;
 
+    if (g_ctx->dwBuildNumber < 10240)
+        ScanModule = SHELL32_DLL;
+    else
+        ScanModule = WINDOWS_STORAGE_DLL;
+
     switch (g_ctx->dwBuildNumber) {
 
     case 7600:
     case 7601:
         Pattern = LaunchAdminProcessSignature760x;
         PatternSize = sizeof(LaunchAdminProcessSignature760x);
-        ScanModule = SHELL32_DLL;
         break;
     case 9200:
         Pattern = LaunchAdminProcessSignature9200;
         PatternSize = sizeof(LaunchAdminProcessSignature9200);
-        ScanModule = SHELL32_DLL;
         break;
     case 9600:
         Pattern = LaunchAdminProcessSignature9600;
         PatternSize = sizeof(LaunchAdminProcessSignature9600);
-        ScanModule = SHELL32_DLL;
         break;
     case 10240:
     case 10586:
         Pattern = LaunchAdminProcessSignature10240_10586;
         PatternSize = sizeof(LaunchAdminProcessSignature10240_10586);
-        ScanModule = WINDOWS_STORAGE_DLL;
         break;
     case 14393:
         Pattern = LaunchAdminProcessSignature14393;
         PatternSize = sizeof(LaunchAdminProcessSignature14393);
-        ScanModule = WINDOWS_STORAGE_DLL;
         break;
     case 15063:
     case 16299:
     case 17134:
     case 17763:
+    case 18362:
+        Pattern = LaunchAdminProcessSignature_15063_18362;
+        PatternSize = sizeof(LaunchAdminProcessSignature_15063_18362);
+        break;
     default:
-        Pattern = LaunchAdminProcessSignature_15063_18282;
-        PatternSize = sizeof(LaunchAdminProcessSignature_15063_18282);
-        ScanModule = WINDOWS_STORAGE_DLL;
+        Pattern = LaunchadminProcessSignature_18895_xxxxx;
+        PatternSize = sizeof(LaunchadminProcessSignature_18895_xxxxx);
         break;
     }
     
@@ -109,13 +117,13 @@ ULONG_PTR AicFindLaunchAdminProcess(
     }
 
     if (ScanBase == NULL) {
-        *ErrorCode = ERROR_INTERNAL_ERROR;
+        *StatusCode = STATUS_INTERNAL_ERROR;
         return 0;
     }
 
     NtHeaders = RtlImageNtHeader(ScanBase);
     if (NtHeaders->OptionalHeader.SizeOfImage <= PatternSize) {
-        *ErrorCode = ERROR_INTERNAL_ERROR;
+        *StatusCode = STATUS_INTERNAL_ERROR;
         return 0;
     }
 
@@ -123,11 +131,11 @@ ULONG_PTR AicFindLaunchAdminProcess(
 
     Address = (ULONG_PTR)supFindPattern(ScanBase, (SIZE_T)ScanSize, Pattern, (SIZE_T)PatternSize);
     if (Address == 0) {
-        *ErrorCode = ERROR_PROC_NOT_FOUND;
+        *StatusCode = STATUS_PROCEDURE_NOT_FOUND;
         return 0;
     }
 
-    *ErrorCode = ERROR_SUCCESS;
+    *StatusCode = STATUS_SUCCESS;
 
     return Address;
 }

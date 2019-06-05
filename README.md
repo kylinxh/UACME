@@ -42,7 +42,7 @@ Keys (watch debug output with dbgview or similar for more info):
    * Implementation: ucmStandardAutoElevation
    * Works from: Windows 7 (7600)
    * Fixed in: Windows 10 TH2 (10558)
-      * How: side effect of OOBE redesign
+      * How: Side effect of OOBE redesign
 4. Author: Jon Ericson, WinNT/Gootkit, mzH
    * Type: AppCompat
    * Method: RedirectEXE Shim
@@ -204,7 +204,7 @@ Keys (watch debug output with dbgview or similar for more info):
      * Implementation: ucmSXSMethod
      * Works from: Windows 7 (7600)
      * Fixed in: Windows 10 RS3 (16232)
-        * How: sysprep.exe requires MS signed modules to load
+        * How: MitigationPolicy->ProcessImageLoadPolicy->PreferSystem32Images
 22. Author: Leo Davidson derivative
      * Type: Dll Hijack
      * Method: IFileOperation, SxS DotLocal
@@ -377,8 +377,8 @@ Keys (watch debug output with dbgview or similar for more info):
      * Component(s): Attacker defined
      * Implementation: ucmCOMHandlersMethod
      * Works from: Windows 7 (7600)
-     * Fixed in: unfixed :see_no_evil:
-        * How: -
+     * Fixed in: Windows 10 19H1 (18362)
+        * How: Side effect of Windows changes
 41. Author: Oddvar Moe
      * Type: Elevated COM interface
      * Method: ICMLuaUtil
@@ -440,8 +440,8 @@ Keys (watch debug output with dbgview or similar for more info):
      * Component(s): Attacker defined
      * Implementation: ucmCOMHandlersMethod2
      * Works from: Windows 7 (7600)
-     * Fixed in: unfixed :see_no_evil:
-        * How: -
+     * Fixed in: Windows 10 19H1 (18362)
+        * How: Side effect of Windows changes
 48. Author: deroko
      * Type: Elevated COM interface
      * Method: ISPPLUAObject
@@ -492,7 +492,7 @@ Keys (watch debug output with dbgview or similar for more info):
      * Method: Registry key manipulation
      * Target(s): \system32\sdclt.exe
      * Component(s): Attacker defined
-     * Implementation: ucmSdcltDelegateExecuteCommandMethod
+     * Implementation: ucmShellDelegateExecuteCommandMethod
      * Works from: Windows 10 (14393)
      * Fixed in: unfixed :see_no_evil:
         * How: -
@@ -513,7 +513,25 @@ Keys (watch debug output with dbgview or similar for more info):
      * Implementation: ucmTokenModUIAccessMethod
      * Works from: Windows 7 (7600)
      * Fixed in: unfixed :see_no_evil:
-        * How: -		
+        * How: -
+56. Author: Hashim Jawad
+     * Type: Shell API
+     * Method: Registry key manipulation
+     * Target(s): \system32\WSReset.exe
+     * Component(s): Attacker defined
+     * Implementation: ucmShellDelegateExecuteCommandMethod
+     * Works from: Windows 10 (17134)
+     * Fixed in: unfixed :see_no_evil:
+        * How: -
+57. Author: Leo Davidson derivative by Win32/Gapz
+     * Type: Dll Hijack
+     * Method: IFileOperation
+     * Target(s): \system32\sysprep\sysprep.exe
+     * Component(s): unattend.dll
+     * Implementation: ucmStandardAutoElevation
+     * Works from: Windows 7 (7600)
+     * Fixed in: Windows 8.1 (9600)
+        * How: sysprep.exe hardened LoadFrom manifest elements			
 
 Note:
 * Method (6) unavailable in wow64 environment starting from Windows 8;
@@ -574,7 +592,8 @@ https://blogs.msdn.microsoft.com/oldnewthing/20160816-00/?p=94105
   * If v140 then select 8.1 (Note that Windows 8.1 SDK must be installed);
   * If v141 then select 10.0.17134.0 (Note that Windows 10.0.17134 SDK must be installed). 
   
-* Note that Fujinami module built with .NET Framework 3.0 (this is requirement for it work), so .NET Framework 3.0 must be installed if you want to build this module.  
+* Note that Fujinami module built with .NET Framework 3.0 (this is requirement for it work), so .NET Framework 3.0 must be installed if you want to build this module.
+* Can be built with SDK 8.1/10.17134/10.17763.
 
 # References
 
@@ -602,6 +621,7 @@ https://blogs.msdn.microsoft.com/oldnewthing/20160816-00/?p=94105
 * Yet another sdclt UAC bypass, http://blog.sevagas.com/?Yet-another-sdclt-UAC-bypass
 * UAC Bypass via SystemPropertiesAdvanced.exe and DLL Hijacking, https://egre55.github.io/system-properties-uac-bypass/
 * Accessing Access Tokens for UIAccess, https://tyranidslair.blogspot.com/2019/02/accessing-access-tokens-for-uiaccess.html
+* Fileless UAC Bypass in Windows Store Binary, https://www.activecyber.us/1/post/2019/03/windows-uac-bypass.html
 
 # Authors
 

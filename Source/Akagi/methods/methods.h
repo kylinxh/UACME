@@ -4,9 +4,9 @@
 *
 *  TITLE:       METHODS.H
 *
-*  VERSION:     3.15
+*  VERSION:     3.18
 *
-*  DATE:        15 Feb 2019
+*  DATE:        29 Mar 2019
 *
 *  Prototypes and definitions for UAC bypass methods table.
 *
@@ -72,9 +72,12 @@ typedef enum _UCM_METHOD {
     UacMethodDateTimeWriter,    //+
     UacMethodAcCplAdmin,        //+
     UacMethodDirectoryMock,     //+
-    UacMethodCOMSdclt,          //+
+    UacMethodShellSdclt,        //+
     UacMethodEgre55,            //+
     UacMethodTokenModUiAccess,  //+
+    UacMethodShellWSReset,      //+
+    UacMethodSysprep5,          //+
+    //UacMethodReserved0,       //-
     UacMethodMax,
     UacMethodInvalid = 0xabcdef
 } UCM_METHOD;
@@ -100,11 +103,11 @@ typedef struct tagUCM_PARAMS_BLOCK {
     ULONG PayloadSize;
 } UCM_PARAMS_BLOCK, *PUCM_PARAMS_BLOCK;
 
-typedef ULONG(CALLBACK *PUCM_EXTRA_ROUTINE)(
+typedef NTSTATUS(CALLBACK *PUCM_EXTRA_ROUTINE)(
     PVOID Parameter
     );
 
-typedef ULONG(CALLBACK *PUCM_API_ROUTINE)(
+typedef NTSTATUS(CALLBACK *PUCM_API_ROUTINE)(
     _In_ PUCM_PARAMS_BLOCK Parameter
     );
 
@@ -113,7 +116,7 @@ typedef struct _UCM_EXTRA_CONTEXT {
     PVOID Parameter;
 } UCM_EXTRA_CONTEXT, *PUCM_EXTRA_CONTEXT;
                   
-#define UCM_API(n) ULONG CALLBACK n(     \
+#define UCM_API(n) NTSTATUS CALLBACK n(     \
     _In_ PUCM_PARAMS_BLOCK Parameter)  
 
 typedef struct _UCM_API_DISPATCH_ENTRY {
@@ -149,5 +152,5 @@ typedef struct _UCM_API_DISPATCH_ENTRY {
 #include "tests\test.h"
 #include "tyranid.h"
 
-BOOL MethodsManagerCall(
+NTSTATUS MethodsManagerCall(
     _In_ UCM_METHOD Method);

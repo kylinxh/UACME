@@ -4,9 +4,9 @@
 *
 *  TITLE:       NTOS.H
 *
-*  VERSION:     1.104
+*  VERSION:     1.115
 *
-*  DATE:        26 Feb 2019
+*  DATE:        18 May 2019
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -80,6 +80,19 @@ typedef unsigned char UCHAR;
 typedef CCHAR KPROCESSOR_MODE;
 typedef UCHAR KIRQL;
 typedef KIRQL *PKIRQL;
+typedef ULONG CLONG;
+typedef LONG KPRIORITY;
+typedef short CSHORT;
+typedef ULONGLONG REGHANDLE, *PREGHANDLE;
+typedef PVOID *PDEVICE_MAP;
+typedef PVOID PHEAD;
+
+#ifndef _WIN32_WINNT_WIN10
+#define _WIN32_WINNT_WIN10 0x0A00
+#endif
+#if (_WIN32_WINNT < _WIN32_WINNT_WIN10)
+typedef PVOID PMEM_EXTENDED_PARAMETER;
+#endif
 
 #ifndef IN_REGION
 #define IN_REGION(x, Base, Size) (((ULONG_PTR)(x) >= (ULONG_PTR)(Base)) && \
@@ -165,26 +178,26 @@ char _RTL_CONSTANT_STRING_type_check(const void *s);
 }
 #endif
 
+#ifndef RTL_CONSTANT_OBJECT_ATTRIBUTES
 #define RTL_CONSTANT_OBJECT_ATTRIBUTES(n, a) \
     { sizeof(OBJECT_ATTRIBUTES), NULL, RTL_CONST_CAST(PUNICODE_STRING)(n), a, NULL, NULL }
+#endif
 
 // This synonym is more appropriate for initializing what isn't actually const.
+#ifndef RTL_INIT_OBJECT_ATTRIBUTES
 #define RTL_INIT_OBJECT_ATTRIBUTES(n, a) RTL_CONSTANT_OBJECT_ATTRIBUTES(n, a)
+#endif
 
 //
 // ntdef.h end
 //
-
+#ifndef RtlOffsetToPointer
 #define RtlOffsetToPointer(Base, Offset)  ((PCHAR)( ((PCHAR)(Base)) + ((ULONG_PTR)(Offset))  ))
+#endif
+
+#ifndef RtlPointerToOffset
 #define RtlPointerToOffset(Base, Pointer)  ((ULONG)( ((PCHAR)(Pointer)) - ((PCHAR)(Base))  ))
-
-
-typedef ULONG CLONG;
-typedef LONG KPRIORITY;
-typedef short CSHORT;
-typedef ULONGLONG REGHANDLE, *PREGHANDLE;
-typedef PVOID *PDEVICE_MAP;
-typedef PVOID PHEAD;
+#endif
 
 //
 // Valid values for the OBJECT_ATTRIBUTES.Attributes field
@@ -379,14 +392,22 @@ typedef PVOID PHEAD;
 //
 // Define special ByteOffset parameters for read and write operations
 //
+#ifndef FILE_WRITE_TO_END_OF_FILE
 #define FILE_WRITE_TO_END_OF_FILE       0xffffffff
+#endif
+#ifndef FILE_USE_FILE_POINTER_POSITION
 #define FILE_USE_FILE_POINTER_POSITION  0xfffffffe
+#endif
 
 //
 // This is the maximum MaximumLength for a UNICODE_STRING.
 //
+#ifndef MAXUSHORT
 #define MAXUSHORT   0xffff     
+#endif
+#ifndef MAX_USTRING
 #define MAX_USTRING ( sizeof(WCHAR) * (MAXUSHORT/sizeof(WCHAR)) )
+#endif
 
 typedef struct _EX_RUNDOWN_REF {
     union
@@ -418,8 +439,7 @@ typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
     PWSTR  Buffer;
-} UNICODE_STRING;
-typedef UNICODE_STRING *PUNICODE_STRING;
+} UNICODE_STRING, *PUNICODE_STRING;
 typedef const UNICODE_STRING *PCUNICODE_STRING;
 
 #ifndef STATIC_UNICODE_STRING
@@ -776,9 +796,11 @@ typedef struct _SYSTEM_ISOLATED_USER_MODE_INFORMATION {
     BOOLEAN HvciStrictMode : 1;
     BOOLEAN DebugEnabled : 1;
     BOOLEAN FirmwarePageProtection : 1;
-    BOOLEAN SpareFlags : 1;
+    BOOLEAN EncryptionKeyAvailable : 1;
+    BOOLEAN SpareFlags : 2;
     BOOLEAN TrustletRunning : 1;
-    BOOLEAN SpareFlags2 : 1;
+    BOOLEAN HvciDisableAllowed : 1;
+    BOOLEAN SpareFlags2 : 6;
     BOOLEAN Spare0[6];
     ULONGLONG Spare1;
 } SYSTEM_ISOLATED_USER_MODE_INFORMATION, *PSYSTEM_ISOLATED_USER_MODE_INFORMATION;
@@ -878,10 +900,12 @@ typedef enum _PROCESSINFOCLASS {
     ProcessSystemResourceManagement = 91,
     ProcessSequenceNumber = 92,
     ProcessLoaderDetour = 93,
-    ProcessSecurityDomainInformation = 93,
-    ProcessCombineSecurityDomainsInformation = 94,
-    ProcessEnableLogging = 95,
-    ProcessLeapSecondInformation = 96,
+    ProcessSecurityDomainInformation = 94,
+    ProcessCombineSecurityDomainsInformation = 95,
+    ProcessEnableLogging = 96,
+    ProcessLeapSecondInformation = 97,
+    ProcessFiberShadowStackAllocation = 98,
+    ProcessFreeFiberShadowStackAllocation = 99,
     MaxProcessInfoClass
 } PROCESSINFOCLASS;
 
@@ -1000,6 +1024,18 @@ typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION {
     ULONG Reserved;
     PROCESS_HANDLE_TABLE_ENTRY_INFO Handles[1];
 } PROCESS_HANDLE_SNAPSHOT_INFORMATION, *PPROCESS_HANDLE_SNAPSHOT_INFORMATION;
+
+//
+// Process/Thread System and User Time
+//  NtQueryInformationProcess using ProcessTimes
+//  NtQueryInformationThread using ThreadTimes
+//
+typedef struct _KERNEL_USER_TIMES {
+    LARGE_INTEGER CreateTime;
+    LARGE_INTEGER ExitTime;
+    LARGE_INTEGER KernelTime;
+    LARGE_INTEGER UserTime;
+} KERNEL_USER_TIMES, *PKERNEL_USER_TIMES;
 
 typedef enum _PS_MITIGATION_OPTION {
     PS_MITIGATION_OPTION_NX,
@@ -1488,6 +1524,8 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
     SystemCodeIntegrityUnlockModeInformation = 205,
     SystemLeapSecondInformation = 206,
     SystemFlags2Information = 207,
+    SystemSecurityModelInformation = 208,
+    SystemCodeIntegritySyntheticCacheInformation = 209,
     MaxSystemInfoClass
 } SYSTEM_INFORMATION_CLASS, *PSYSTEM_INFORMATION_CLASS;
 
@@ -1510,7 +1548,15 @@ typedef struct _SYSTEM_SPECULATION_CONTROL_INFORMATION {
         ULONG BpbDisabledKernelToUser : 1;
         ULONG SpecCtrlRetpolineEnabled : 1;
         ULONG SpecCtrlImportOptimizationEnabled : 1;
-        ULONG Reserved : 16;
+        ULONG EnhancedIbrs : 1;
+        ULONG HvL1tfStatusAvailable : 1;
+        ULONG HvL1tfProcessorNotAffected : 1;
+        ULONG HvL1tfMigitationEnabled : 1;
+        ULONG HvL1tfMigitationNotEnabled_Hardware : 1;
+        ULONG HvL1tfMigitationNotEnabled_LoadOption : 1;
+        ULONG HvL1tfMigitationNotEnabled_CoreScheduler : 1;
+        ULONG EnhancedIbrsReported : 1;
+        ULONG Reserved : 8;
     } SpeculationControlFlags;
 } SYSTEM_SPECULATION_CONTROL_INFORMATION, *PSYSTEM_SPECULATION_CONTROL_INFORMATION;
 
@@ -1748,6 +1794,10 @@ typedef enum _FILE_INFORMATION_CLASS {
     FileMemoryPartitionInformation,
     FileStatLxInformation,
     FileCaseSensitiveInformation,
+    FileLinkInformationEx,
+    FileLinkInformationExBypassAccessCheck,
+    FileStorageReserveIdInformation,
+    FileCaseSensitiveInformationForceAccessCheck,
     FileMaximumInformation
 } FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
 
@@ -1765,6 +1815,7 @@ typedef enum _FSINFOCLASS {
     FileFsSectorSizeInformation,
     FileFsDataCopyInformation,
     FileFsMetadataSizeInformation,
+    FileFsFullSizeInformationEx,
     FileFsMaximumInformation
 } FS_INFORMATION_CLASS, *PFS_INFORMATION_CLASS;
 
@@ -2651,7 +2702,8 @@ typedef struct _SYSTEM_HANDLE_INFORMATION_EX {
 #define SE_INC_WORKING_SET_PRIVILEGE (33L)
 #define SE_TIME_ZONE_PRIVILEGE (34L)
 #define SE_CREATE_SYMBOLIC_LINK_PRIVILEGE (35L)
-#define SE_MAX_WELL_KNOWN_PRIVILEGE SE_CREATE_SYMBOLIC_LINK_PRIVILEGE
+#define SE_DELEGATE_SESSION_USER_IMPERSONATE_PRIVILEGE (36L)
+#define SE_MAX_WELL_KNOWN_PRIVILEGE SE_DELEGATE_SESSION_USER_IMPERSONATE_PRIVILEGE
 
 //
 // Generic test for success on any status value (non-negative numbers
@@ -5233,13 +5285,24 @@ typedef struct _PROCESS_MITIGATION_SIDE_CHANNEL_ISOLATION_POLICY_W10 {
     } DUMMYUNIONNAME;
 } PROCESS_MITIGATION_SIDE_CHANNEL_ISOLATION_POLICY_W10, *PPROCESS_MITIGATION_SIDE_CHANNEL_ISOLATION_POLICY_W10;
 
+typedef struct _PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY_W10 {
+    union {
+        DWORD Flags;
+        struct {
+            DWORD DisallowWin32kSystemCalls : 1;
+            DWORD AuditDisallowWin32kSystemCalls : 1;
+            DWORD ReservedFlags : 30;
+        } DUMMYSTRUCTNAME;
+    } DUMMYUNIONNAME;
+} PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY_W10, *PPROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY_W10;
+
 typedef struct _PROCESS_MITIGATION_POLICY_INFORMATION {
     PROCESS_MITIGATION_POLICY Policy;
     union
     {
         PROCESS_MITIGATION_ASLR_POLICY ASLRPolicy;
         PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY StrictHandleCheckPolicy;
-        PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY SystemCallDisablePolicy;
+        PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY_W10 SystemCallDisablePolicy;
         PROCESS_MITIGATION_EXTENSION_POINT_DISABLE_POLICY ExtensionPointDisablePolicy;
         PROCESS_MITIGATION_DYNAMIC_CODE_POLICY_W10 DynamicCodePolicy;
         PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY_W10 ControlFlowGuardPolicy;
@@ -5541,8 +5604,81 @@ typedef struct _ESERVERSILO_GLOBALS {
 */
 
 /*
+** SOFTWARE LICENSING START
+*/
+#pragma pack(push, 1)
+typedef struct _SL_CACHE_VALUE_DESCRIPTOR {
+    USHORT Size;
+    USHORT NameLength;
+    USHORT Type;
+    USHORT DataLength;
+    ULONG Attributes;
+    ULONG Reserved;
+    WCHAR Name[ANYSIZE_ARRAY];
+} SL_CACHE_VALUE_DESCRIPTOR, *PSL_CACHE_VALUE_DESCRIPTOR;
+typedef SL_CACHE_VALUE_DESCRIPTOR SL_KMEM_CACHE_VALUE_DESCRIPTOR;
+#pragma pack(pop)
+
+typedef struct _SL_CACHE {
+    ULONG TotalSize;
+    ULONG SizeOfData;
+    ULONG SignatureSize;
+    ULONG Flags;
+    ULONG Version;
+    SL_KMEM_CACHE_VALUE_DESCRIPTOR Descriptors[ANYSIZE_ARRAY];
+} SL_CACHE, *PSL_CACHE;
+typedef SL_CACHE SL_KMEM_CACHE;
+
+typedef struct _SL_APPX_CACHE_VALUE_DESCRIPTOR {
+    UCHAR HashedName[32];
+    ULONGLONG Expiration;
+    ULONG DataSize;
+    WCHAR Name[ANYSIZE_ARRAY];
+} SL_APPX_CACHE_VALUE_DESCRIPTOR, *PSL_APPX_CACHE_VALUE_DESCRIPTOR;
+
+typedef struct _SL_APPX_CACHE {
+    ULONG Version;
+    ULONG Flags;
+    ULONG DataSize;
+    ULONGLONG DataCheckSum;
+    SL_APPX_CACHE_VALUE_DESCRIPTOR Descriptors[ANYSIZE_ARRAY];
+} SL_APPX_CACHE, *PSL_APPX_CACHE;
+
+
+/*
+** SOFTWARE LICENSING END
+*/
+
+
+/*
 **  LDR START
 */
+//
+// Dll Characteristics for LdrLoadDll
+//
+#define LDR_IGNORE_CODE_AUTHZ_LEVEL                 0x00001000
+
+//
+// LdrAddRef Flags
+//
+#define LDR_ADDREF_DLL_PIN                          0x00000001
+
+//
+// LdrLockLoaderLock Flags
+//
+#define LDR_LOCK_LOADER_LOCK_FLAG_RAISE_ON_ERRORS   0x00000001
+#define LDR_LOCK_LOADER_LOCK_FLAG_TRY_ONLY          0x00000002
+
+//
+// LdrUnlockLoaderLock Flags
+//
+#define LDR_UNLOCK_LOADER_LOCK_FLAG_RAISE_ON_ERRORS 0x00000001
+
+//
+// LdrGetDllHandleEx Flags
+//
+#define LDR_GET_DLL_HANDLE_EX_UNCHANGED_REFCOUNT    0x00000001
+#define LDR_GET_DLL_HANDLE_EX_PIN                   0x00000002
 
 typedef VOID(NTAPI *PLDR_LOADED_MODULE_ENUMERATION_CALLBACK_FUNCTION)(
     _In_    PCLDR_DATA_TABLE_ENTRY DataTableEntry,
@@ -5756,6 +5892,12 @@ LdrQueryImageFileExecutionOptions(
     _Out_opt_ PULONG ResultSize);
 
 NTSYSAPI
+BOOLEAN
+NTAPI
+LdrIsModuleSxsRedirected( //LdrEntry->Flags->Redirected
+    _In_ PVOID DllHandle);
+
+NTSYSAPI
 NTSTATUS
 NTAPI
 LdrQueryImageFileExecutionOptionsEx(
@@ -5912,6 +6054,9 @@ CsrClientConnectToServer(
 *
 ************************************************************************************/
 
+#define RTL_DUPLICATE_UNICODE_STRING_NULL_TERMINATE (0x00000001)
+#define RTL_DUPLICATE_UNICODE_STRING_ALLOCATE_NULL_STRING (0x00000002)
+
 #ifndef RtlInitEmptyUnicodeString
 #define RtlInitEmptyUnicodeString(_ucStr,_buf,_bufSize) \
     ((_ucStr)->Buffer = (_buf), \
@@ -6063,6 +6208,14 @@ NTAPI
 RtlAnsiStringToUnicodeString(
     _Out_ PUNICODE_STRING DestinationString,
     _In_ PCANSI_STRING SourceString,
+    _In_ BOOLEAN AllocateDestinationString);
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+RtlUnicodeStringToAnsiString(
+    _Inout_ PANSI_STRING DestinationString,
+    _In_ PUNICODE_STRING SourceString,
     _In_ BOOLEAN AllocateDestinationString);
 
 NTSYSAPI
@@ -7442,6 +7595,15 @@ ULONG
 STDAPIVCALLTYPE
 DbgPrint(
     _In_z_ _Printf_format_string_ PCH Format,
+    ...);
+
+NTSYSAPI
+ULONG
+STDAPIVCALLTYPE
+DbgPrintEx(
+    _In_ ULONG ComponentId,
+    _In_ ULONG Level,
+    _In_z_ _Printf_format_string_ PSTR Format,
     ...);
 
 NTSYSAPI
@@ -8986,6 +9148,14 @@ NtLoadHotPatch(
 * Section API (+MemoryPartitions).
 *
 ************************************************************************************/
+
+#define MEM_EXECUTE_OPTION_DISABLE 0x1
+#define MEM_EXECUTE_OPTION_ENABLE 0x2
+#define MEM_EXECUTE_OPTION_DISABLE_THUNK_EMULATION 0x4
+#define MEM_EXECUTE_OPTION_PERMANENT 0x8
+#define MEM_EXECUTE_OPTION_EXECUTE_DISPATCH_ENABLE 0x10
+#define MEM_EXECUTE_OPTION_IMAGE_DISPATCH_ENABLE 0x20
+#define MEM_EXECUTE_OPTION_VALID_FLAGS 0x3f
 
 typedef enum _MEMORY_PARTITION_INFORMATION_CLASS {
     SystemMemoryPartitionInformation,
@@ -10859,6 +11029,26 @@ NtTraceControl(
     _Out_writes_bytes_opt_(OutBufferLen) PVOID OutBuffer,
     _In_ ULONG OutBufferLen,
     _Out_ PULONG ReturnLength);
+
+/************************************************************************************
+*
+* Enclave API.
+*
+************************************************************************************/
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtLoadEnclaveData(
+    _In_ HANDLE ProcessHandle,
+    _In_ PVOID BaseAddress,
+    _In_reads_bytes_(BufferSize) PVOID Buffer,
+    _In_ SIZE_T BufferSize,
+    _In_ ULONG Protect,
+    _In_reads_bytes_(PageInformationLength) PVOID PageInformation,
+    _In_ ULONG PageInformationLength,
+    _Out_opt_ PSIZE_T NumberOfBytesWritten,
+    _Out_opt_ PULONG EnclaveError);
 
 /************************************************************************************
 *

